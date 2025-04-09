@@ -1,7 +1,7 @@
 ARG NGINX_VERSION="1.27.0"
 
 # Stage 1 - build modules
-FROM nginx:${NGINX_VERSION}-alpine as build
+FROM nginx:${NGINX_VERSION}-alpine AS build
 LABEL maintainer="mail@alexanderwolz.de"
 
 ARG NGINX_VERSION
@@ -42,7 +42,7 @@ RUN CONFARGS=$(nginx -V 2>&1 | sed -n -e 's/^.*arguments: //p') \
 
 
 # Stage 2 - run container
-FROM nginx:${NGINX_VERSION}-alpine as run
+FROM nginx:${NGINX_VERSION}-alpine AS run
 LABEL maintainer="mail@alexanderwolz.de"
 
 RUN apk update && apk add --no-cache bash nano libmaxminddb \

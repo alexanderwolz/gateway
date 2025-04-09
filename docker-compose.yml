@@ -1,0 +1,31 @@
+services:
+  
+  gateway:
+    container_name: gateway
+    hostname: gateway
+    build: ../build
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - certs:/opt/certs/:ro
+      - data:/var/www/html:rw
+      - geoip:/etc/geoip:ro
+    healthcheck:
+      test: ["CMD", "curl http://localhost:80 || exit 1"]
+      timeout: 10s
+    labels:
+      - application.group=gateway
+    networks:
+      - gateway
+
+volumes:
+  certs:
+  data:
+  geoip:
+
+networks:
+  gateway:
