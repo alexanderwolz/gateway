@@ -1,4 +1,4 @@
-ARG NGINX_VERSION="1.27.0"
+ARG NGINX_VERSION="1.27.4"
 
 # Stage 1 - build modules
 FROM nginx:${NGINX_VERSION}-alpine AS build
