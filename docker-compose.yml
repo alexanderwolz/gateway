@@ -3,7 +3,7 @@ services:
   gateway:
     container_name: gateway
     hostname: gateway
-    build: ../build
+    build: ./build
     restart: unless-stopped
     ports:
       - 80:80
