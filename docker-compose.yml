@@ -11,11 +11,10 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-      - certs:/opt/certs/:ro
-      - data:/var/www/html:rw
-      - geoip:/etc/geoip:ro
+      - data:/var/www/html
+      - geoip:/etc/geoip # mount your maxmind geoip db here
     healthcheck:
-      test: ["CMD", "curl http://localhost:80 || exit 1"]
+      test: ["CMD", "curl http://localhost:80/health || exit 1"]
       timeout: 10s
     labels:
       - application.group=gateway

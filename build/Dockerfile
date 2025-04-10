@@ -45,14 +45,27 @@ RUN CONFARGS=$(nginx -V 2>&1 | sed -n -e 's/^.*arguments: //p') \
 FROM nginx:${NGINX_VERSION}-alpine AS run
 LABEL maintainer="mail@alexanderwolz.de"
 
-RUN apk update && apk add --no-cache bash nano libmaxminddb \
-    && mkdir /var/run/nginx
+RUN apk update && apk add --no-cache bash nano libmaxminddb openssl \
+    && mkdir /var/run/nginx \
+    && mkdir /etc/nginx/ssl \
+    && mkdir /etc/nginx/conf.d/http \
+    && mkdir /etc/nginx/conf.d/stream \
+    && mkdir -p /var/www/certbot
 
-COPY empty.sh /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
 COPY --from=build /build/nginx/objs/ngx_http_geoip2_module.so /usr/lib/nginx/modules/ngx_http_geoip2_module.so
 COPY --from=build /build/nginx/objs/ngx_stream_geoip2_module.so /usr/lib/nginx/modules/ngx_stream_geoip2_module.so
 #COPY --from=build /build/nginx/objs/ngx_http_auth_jwt_module.so /usr/lib/nginx/modules/ngx_http_auth_jwt_module.so
 # use "load_module  modules/ngx_http_auth_jwt_module.so;" in nginx.conf
+
+#COPY empty.sh /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+ADD conf/includes /etc/nginx/includes
+COPY conf/nginx.conf /etc/nginx/nginx.conf
+COPY conf/default.conf /etc/nginx/conf.d/default.conf
+COPY conf/localhost.conf /etc/nginx/conf.d/localhost.conf
+COPY entrypoint.sh /docker-entrypoint.d/00-custom-entrypoint.sh
+RUN chmod +x /docker-entrypoint.d/00-custom-entrypoint.sh
+
+COPY geoip /etc/geoip_sample
 
 WORKDIR /var/www/html
 
