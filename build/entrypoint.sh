@@ -13,7 +13,23 @@ FAKE_CERT="/etc/nginx/ssl/nginx.crt"
 FAKE_KEY="/etc/nginx/ssl/nginx.key"
 DH_PARAM="/etc/nginx/ssl/dhparam.pem"
 GEOIP_DIR="/etc/geoip"
+GEOIP_COUNTRY_FILE="$GEOIP_DIR/GeoLite2-Country.mmdb"
+GEOIP_CITY_FILE="$GEOIP_DIR/GeoLite2-City.mmdb"
 GEOIP_SAMPLE="/etc/geoip_sample/sample.mmdb"
+
+COUNTRY_MATCH=1
+CITY_MATCH=1
+if [ -f $GEOIP_COUNTRY_FILE ]; then
+    cmp -s $GEOIP_SAMPLE $GEOIP_COUNTRY_FILE
+    COUNTRY_MATCH=$?
+fi
+if [ -f $GEOIP_CITY_FILE ]; then
+    cmp -s $GEOIP_SAMPLE $GEOIP_CITY_FILE
+    CITY_MATCH=$?
+fi
+if [ "$COUNTRY_MATCH" -eq 0 ] && [ "$CITY_MATCH" -eq 0 ]; then
+    log "Using sample geoip database for now, please mount valid MaxMind DB files to $GEOIP_DIR"
+fi
 
 if [ ! -f $FAKE_KEY ] || [ ! -f $FAKE_CERT ]; then
     log "Fake certificate do not exist, creating .."
@@ -29,15 +45,5 @@ if [ ! -f $DH_PARAM ]; then
         || (log "Error while creating DH param" && exit 1)
     log "DH param successfully created ($DH_PARAM)"
 fi
-
-if [ -z "$( ls -A $GEOIP_DIR )" ]; then
-    log "geoip does not exist, using dummy sample file for now.."
-    ln -sf $GEOIP_SAMPLE $GEOIP_DIR/GeoLite2-Country.mmdb
-    ln -sf $GEOIP_SAMPLE $GEOIP_DIR/GeoLite2-City.mmdb
-    log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-    log "!!! Please mount valid MaxMind DB files to $GEOIP_DIR !!!"
-    log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-fi
-
 
 log "Finished custom entrypoint"
