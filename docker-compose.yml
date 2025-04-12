@@ -11,7 +11,8 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-      - data:/var/www/html
+      - ./conf:/etc/nginx/conf.d/http:ro
+      - ./conf/html:/var/www/html
       - geoip:/etc/geoip # mount your maxmind geoip db here
     healthcheck:
       test: ["CMD", "curl http://localhost:80/health || exit 1"]
@@ -22,8 +23,6 @@ services:
       - gateway
 
 volumes:
-  certs:
-  data:
   geoip:
 
 networks:

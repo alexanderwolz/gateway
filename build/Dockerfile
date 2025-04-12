@@ -10,7 +10,7 @@ ARG GEOIP2_VERSION="3.4"
 
 # download build tools and dependenciess
 RUN apk update && apk add --no-cache gcc libc-dev make perl openssl-dev \
- pcre-dev pcre2-dev zlib-dev libmaxminddb-dev
+    pcre-dev pcre2-dev zlib-dev libmaxminddb-dev
 
 WORKDIR /build
 
