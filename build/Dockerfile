@@ -38,6 +38,8 @@ RUN CONFARGS=$(nginx -V 2>&1 | sed -n -e 's/^.*arguments: //p') \
 FROM nginx:${NGINX_VERSION}-alpine AS run
 LABEL maintainer="mail@alexanderwolz.de"
 
+ENV NGINX_VERSION=${NGINX_VERSION}
+
 RUN apk update && apk add --no-cache bash nano libmaxminddb openssl \
     && rm /etc/nginx/conf.d/default.conf \
     && mkdir /var/run/nginx \
