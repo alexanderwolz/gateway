@@ -11,7 +11,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-      - ./conf:/etc/nginx/conf.d/http:ro
+      - ./conf/example.com.conf:/etc/nginx/conf.d/http/example.com.conf:ro
       - ./conf/html:/var/www/html
       - geoip:/etc/geoip # mount your maxmind geoip db here
     healthcheck:

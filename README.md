@@ -16,7 +16,7 @@ This repository holds a Dockerfile to provide a customized version of the NGINX 
 
 
 ## 🐳 Docker Hub
-```docker pull alexanderwolz/gateway:1.27.4```
+```docker pull alexanderwolz/gateway:1.2-nginx-1.27.5```
 
 
 - - -

@@ -1,7 +1,7 @@
 ARG NGINX_VERSION="1.27.5"
 
 
-# Stage 1 - build modules
+# Stage 1 - build nginx modules
 FROM nginx:${NGINX_VERSION}-alpine AS build
 LABEL maintainer="mail@alexanderwolz.de"
 
