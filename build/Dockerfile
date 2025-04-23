@@ -1,4 +1,5 @@
-ARG NGINX_VERSION="1.27.5"
+ARG NGINX_VERSION="1.27.1"
+ARG OPENRESTY_VERSION="$NGINX_VERSION.2"
 
 
 # Stage 1 - build nginx modules
@@ -35,32 +36,54 @@ RUN CONFARGS=$(nginx -V 2>&1 | sed -n -e 's/^.*arguments: //p') \
 
 
 # Stage 2 - run container
-FROM nginx:${NGINX_VERSION}-alpine AS run
+FROM openresty/openresty:${OPENRESTY_VERSION}-alpine-fat AS run
 LABEL maintainer="mail@alexanderwolz.de"
 
-ENV NGINX_VERSION=${NGINX_VERSION}
+ARG OPENRESTY_VERSION
+ENV OPENRESTY_VERSION=${OPENRESTY_VERSION}
 
-RUN apk update && apk add --no-cache bash nano libmaxminddb openssl \
+COPY docker-entrypoint.sh /
+COPY entrypoint.sh /docker-entrypoint.d/00-custom-entrypoint.sh
+
+RUN apk update && apk add --no-cache bash nano curl perl libmaxminddb openssl \
+    && chmod +x /docker-entrypoint.sh \
+    && chmod +x /docker-entrypoint.d/00-custom-entrypoint.sh \
     && rm /etc/nginx/conf.d/default.conf \
     && mkdir /var/run/nginx \
     && mkdir /etc/nginx/ssl \
     && mkdir /etc/nginx/conf.d/http \
     && mkdir /etc/nginx/conf.d/stream \
-    && mkdir -p /var/www/certbot
+    && mkdir -p /var/www/certbot \
+    # OPENRESTY adaptions to fit NGINX defaults
+    && rm /usr/local/openresty/nginx/logs/access.log \
+    && rm /usr/local/openresty/nginx/logs/error.log \
+    && mv /usr/local/openresty/nginx/conf/* /etc/nginx \
+    && mkdir /var/log/nginx \
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log
 
-COPY --from=build /build/nginx/objs/ngx_http_geoip2_module.so /usr/lib/nginx/modules/ngx_http_geoip2_module.so
-COPY --from=build /build/nginx/objs/ngx_stream_geoip2_module.so /usr/lib/nginx/modules/ngx_stream_geoip2_module.so
+# #OPM has very old package versions, so this resty-openidc version (1.7.5) needs a dependency hack
+# #install lua-resty-openidc -> https://github.com/zmartzone/lua-resty-openidc
+# RUN opm install zmartzone/lua-resty-openidc \
+#     && opm remove bungle/lua-resty-session && \
+#     opm get bungle/lua-resty-session=3.10
+
+#LUAROCKS contains the new packages, but needs the alpine-fat container
+RUN luarocks install lua-resty-openidc
+
+COPY --from=build /build/nginx/objs/ngx_http_geoip2_module.so /usr/local/openresty/nginx/modules/ngx_http_geoip2_module.so
+COPY --from=build /build/nginx/objs/ngx_stream_geoip2_module.so /usr/local/openresty/nginx/modules/ngx_stream_geoip2_module.so
 
 COPY geoip/sample.mmdb /etc/geoip_sample/sample.mmdb
 COPY geoip/sample.mmdb /etc/geoip/GeoLite2-Country.mmdb
 COPY geoip/sample.mmdb /etc/geoip/GeoLite2-City.mmdb
 
-COPY empty.sh /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
 ADD conf/includes /etc/nginx/includes
 COPY conf/nginx.conf /etc/nginx/nginx.conf
 COPY conf/default.conf /etc/nginx/defaults/default.conf
 COPY conf/localhost.conf /etc/nginx/defaults/localhost.conf
-COPY entrypoint.sh /docker-entrypoint.d/00-custom-entrypoint.sh
-RUN chmod +x /docker-entrypoint.d/00-custom-entrypoint.sh
 
 WORKDIR /var/www/html
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["/usr/local/openresty/bin/openresty", "-c", "/etc/nginx/nginx.conf", "-g", "daemon off;"]

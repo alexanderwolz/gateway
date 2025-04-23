@@ -1,10 +1,12 @@
 services:
   
-  gateway:
-    container_name: gateway
-    hostname: gateway
+  openresty:
+    container_name: openresty
+    hostname: openresty
     build: ./build
     restart: unless-stopped
+    environment:
+      ENV_VARIABLE: Hello from Env
     ports:
       - 80:80
       - 443:443
@@ -12,6 +14,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
       - ./conf/example.com.conf:/etc/nginx/conf.d/http/example.com.conf:ro
+      - ./conf/includes/global.conf:/etc/nginx/includes/global.conf:ro
+      - ./conf/lua:/etc/nginx/lua:ro
       - ./conf/html:/var/www/html
       - geoip:/etc/geoip # mount your maxmind geoip db here
     healthcheck:
