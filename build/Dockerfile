@@ -1,4 +1,4 @@
-ARG NGINX_VERSION="1.27.4"
+ARG NGINX_VERSION="1.27.5"
 
 
 # Stage 1 - build modules
