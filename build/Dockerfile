@@ -3,7 +3,7 @@ ARG OPENRESTY_VERSION="$NGINX_VERSION.2-4"
 
 
 # Stage 1 - build nginx modules
-FROM nginx:${NGINX_VERSION}-alpine AS build
+FROM nginx:${NGINX_VERSION}-alpine-slim AS build
 LABEL maintainer="mail@alexanderwolz.de"
 
 ARG NGINX_VERSION
@@ -36,8 +36,11 @@ RUN CONFARGS=$(nginx -V 2>&1 | sed -n -e 's/^.*arguments: //p') \
 
 
 # Stage 2 - run container
-FROM openresty/openresty:${OPENRESTY_VERSION}-alpine-fat AS run
+FROM openresty/openresty:${OPENRESTY_VERSION}-alpine-slim AS run
 LABEL maintainer="mail@alexanderwolz.de"
+
+ARG NGINX_VERSION
+ENV NGINX_VERSION=${NGINX_VERSION}
 
 ARG OPENRESTY_VERSION
 ENV OPENRESTY_VERSION=${OPENRESTY_VERSION}
@@ -64,12 +67,12 @@ RUN apk update && apk add --no-cache bash nano curl perl libmaxminddb openssl \
 
 # #OPM has very old package versions, so this resty-openidc version (1.7.5) needs a dependency hack
 # #install lua-resty-openidc -> https://github.com/zmartzone/lua-resty-openidc
-# RUN opm install zmartzone/lua-resty-openidc \
-#     && opm remove bungle/lua-resty-session && \
-#     opm get bungle/lua-resty-session=3.10
+RUN opm install zmartzone/lua-resty-openidc \
+    && opm remove bungle/lua-resty-session && \
+    opm get bungle/lua-resty-session=3.10
 
 #LUAROCKS contains the new packages, but needs the alpine-fat container
-RUN luarocks install lua-resty-openidc
+#RUN luarocks install lua-resty-openidc
 
 COPY --from=build /build/nginx/objs/ngx_http_geoip2_module.so /usr/local/openresty/nginx/modules/ngx_http_geoip2_module.so
 COPY --from=build /build/nginx/objs/ngx_stream_geoip2_module.so /usr/local/openresty/nginx/modules/ngx_stream_geoip2_module.so
