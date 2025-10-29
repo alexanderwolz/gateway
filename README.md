@@ -16,7 +16,7 @@ This repository holds a Dockerfile to provide a customized version of the NGINX 
 
 
 ## 🐳 Docker Hub
-```docker pull alexanderwolz/gateway:1.2-openresty-1.27.1.2```
+```docker pull alexanderwolz/gateway:1.27.1.2-4```
 
 
 - - -
