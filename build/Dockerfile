@@ -47,11 +47,25 @@ WORKDIR /build/openresty
 RUN ./configure \
     --prefix=/opt/openresty \
     --with-compat \
+    --with-pcre-jit \
+    --with-http_ssl_module \
+    --with-http_v2_module \
+    --with-http_realip_module \
+    --with-http_stub_status_module \
+    --with-http_addition_module \
+    --with-http_auth_request_module \
+    --with-http_dav_module \
+    --with-http_flv_module \
+    --with-http_gunzip_module \
+    --with-http_gzip_static_module \
+    --with-http_mp4_module \
+    --with-http_random_index_module \
+    --with-http_secure_link_module \
+    --with-http_slice_module \
+    --with-http_sub_module \
     --with-stream \
     --with-stream_ssl_module \
     --with-stream_ssl_preread_module \
-    --with-http_ssl_module \
-    --with-pcre-jit \
     --add-dynamic-module=/build/geoip2 \
     --with-cc-opt="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2" \
     --with-ld-opt="-Wl,-z,relro -Wl,-z,now" \
@@ -62,6 +76,7 @@ ENV LUAJIT_BIN=/opt/openresty/luajit/bin/luajit
 ENV LUAJIT_LIB=/opt/openresty/luajit/lib
 ENV LUAJIT_INC=/opt/openresty/luajit/include/luajit-2.1
 
+#TODO check if cjson is really necessary (should be packed by openResty)
 RUN luarocks install lua-cjson --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
 RUN luarocks install lua-resty-openidc --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
 
