@@ -1,4 +1,4 @@
-# Gateway based on NGINX with custom modules
+# Gateway based on OpenResty with custom modules
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/alexanderwolz/gateway)
 ![GitHub](https://img.shields.io/github/license/alexanderwolz/gateway)
@@ -16,7 +16,7 @@ This repository holds a Dockerfile to provide a customized version of the OpenRe
 
 
 ## 🐳 Docker Hub
-```docker pull alexanderwolz/gateway:1.27.1.2-4```
+```docker pull alexanderwolz/gateway:1.29.2.1-1```
 
 
 - - -
