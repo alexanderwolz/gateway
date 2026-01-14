@@ -13,11 +13,11 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-      - ./conf/example.com.conf:/etc/nginx/conf.d/http/example.com.conf:ro
-      - ./conf/includes/global.conf:/etc/nginx/includes/global.conf:ro
-      - ./conf/lua:/etc/nginx/lua:ro
-      - ./conf/html:/var/www/html
-      - geoip:/etc/geoip # mount your maxmind geoip db here
+      - ./config/example.com.conf:/opt/openresty/nginx/conf/vhosts/http/example.com.conf:ro
+      - ./config/includes/global.conf:/opt/openresty/nginx/conf/includes/global.conf:ro
+      - ./config/lua:/opt/openresty/lualib/custom:ro
+      - ./config/html:/var/www/html
+      - geoip:/etc/geoip # mount your maxmind geoip db here (must be nonroot)
     healthcheck:
       test: ["CMD", "curl http://localhost:80/health || exit 1"]
       timeout: 10s

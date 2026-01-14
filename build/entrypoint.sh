@@ -9,10 +9,13 @@ function log(){
 
 log "Started custom entrypoint.."
 
-FAKE_CERT="/etc/nginx/ssl/nginx.crt"
-FAKE_KEY="/etc/nginx/ssl/nginx.key"
-DH_PARAM="/etc/nginx/ssl/dhparam.pem"
+SSL_DIR="/etc/ssl/gateway"
 GEOIP_DIR="/etc/geoip"
+
+FAKE_CERT="$SSL_DIR/gateway.crt"
+FAKE_KEY="$SSL_DIR/gateway.key"
+DH_PARAM="$SSL_DIR/dhparam.pem"
+
 GEOIP_COUNTRY_FILE="$GEOIP_DIR/GeoLite2-Country.mmdb"
 GEOIP_CITY_FILE="$GEOIP_DIR/GeoLite2-City.mmdb"
 GEOIP_SAMPLE="/etc/geoip_sample/sample.mmdb"

@@ -7,7 +7,7 @@
 
 ## 🧑‍💻 About
 
-This repository holds a Dockerfile to provide a customized version of the NGINX web server.
+This repository holds a Dockerfile to provide a customized version of the OpenResty web server.
 
 ## 🛠️ Added Modules
 

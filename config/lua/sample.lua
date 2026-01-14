@@ -1,6 +1,6 @@
 local sample = {}
 
--- shows the current time (sample function)
+-- says hello (sample function)
 function sample.hello ()
     return "Hello from LUA :)"
 end
