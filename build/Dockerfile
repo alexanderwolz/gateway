@@ -162,7 +162,8 @@ RUN mkdir -p \
 # - Prefer running OpenResty on 8080/8443 and map ports outside
 # - Or add ONLY NET_BIND_SERVICE at runtime (K8s/Docker), not root.
 
-USER nonroot
+# we need to find a way to work with SSL certs (they belong to root)
+#USER nonroot
 
 HEALTHCHECK CMD /opt/openresty/nginx/sbin/nginx -t || exit 1
 
