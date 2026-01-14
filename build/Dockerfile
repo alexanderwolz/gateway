@@ -1,92 +1,170 @@
-ARG NGINX_VERSION="1.27.1"
-ARG OPENRESTY_VERSION="$NGINX_VERSION.2-4"
+ARG DEBIAN_VERSION="13.3"
+ARG OPENRESTY_VERSION="1.29.2.1"
+ARG GEOIP2_VERSION="3.4"
+ARG UID_NONROOT="65532"
+ARG GID_NONROOT="65532"
 
 
-# Stage 1 - build nginx modules
-FROM nginx:${NGINX_VERSION}-alpine-slim AS build
+# Stage 1 - build OpenResty and additional modules
+FROM debian:${DEBIAN_VERSION}-slim AS build
 LABEL maintainer="mail@alexanderwolz.de"
 
-ARG NGINX_VERSION
-ARG GEOIP2_VERSION="3.4"
+ARG OPENRESTY_VERSION
+ARG GEOIP2_VERSION
 
-# download build tools and dependenciess
-RUN apk update && apk add --no-cache gcc libc-dev make perl openssl-dev \
-    pcre-dev pcre2-dev zlib-dev libmaxminddb-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    wget \
+    build-essential \
+    perl \
+    libmaxminddb-dev \
+    libpcre2-dev \
+    zlib1g-dev \
+    libssl-dev \
+    make \
+    luarocks \
+    lua-sec \
+    lua-socket \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
 
-# download nginx sources
-RUN wget -O nginx.tar.gz http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
-    && mkdir nginx && tar zxvf nginx.tar.gz -C nginx --strip-components 1 \
-    && rm nginx.tar.gz
+# Fetch OpenResty source
+RUN wget -O openresty.tar.gz "https://openresty.org/download/openresty-${OPENRESTY_VERSION}.tar.gz" \
+  && mkdir -p openresty \
+  && tar xzf openresty.tar.gz -C openresty --strip-components 1 \
+  && rm openresty.tar.gz
 
-# download geoip2 module
-RUN wget -O ngx_http_geoip2_module.tar.gz https://github.com/leev/ngx_http_geoip2_module/archive/refs/tags/${GEOIP2_VERSION}.tar.gz \
-    && mkdir ngx_http_geoip2_module && tar zxvf ngx_http_geoip2_module.tar.gz -C ngx_http_geoip2_module --strip-components 1 \
-    && rm ngx_http_geoip2_module.tar.gz
+# Fetch GeoIP2 module source
+RUN wget -O geoip2.tar.gz "https://github.com/leev/ngx_http_geoip2_module/archive/refs/tags/${GEOIP2_VERSION}.tar.gz" \
+  && mkdir -p geoip2 \
+  && tar xzf geoip2.tar.gz -C geoip2 --strip-components 1 \
+  && rm geoip2.tar.gz
 
-# compile nginx modules
-WORKDIR /build/nginx
-RUN CONFARGS=$(nginx -V 2>&1 | sed -n -e 's/^.*arguments: //p') \
-    ./configure \
-    --with-compat $CONFARGS \
-    --add-dynamic-module=../ngx_http_geoip2_module \
+WORKDIR /build/openresty
+
+# Build OpenResty + dynamic modules
+RUN ./configure \
+    --prefix=/opt/openresty \
+    --with-compat \
     --with-stream \
-    && make && make install
+    --with-stream_ssl_module \
+    --with-stream_ssl_preread_module \
+    --with-http_ssl_module \
+    --with-pcre-jit \
+    --add-dynamic-module=/build/geoip2 \
+    --with-cc-opt="-O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2" \
+    --with-ld-opt="-Wl,-z,relro -Wl,-z,now" \
+  && make -j"$(nproc)" \
+  && make install
+
+ENV LUAJIT_BIN=/opt/openresty/luajit/bin/luajit
+ENV LUAJIT_LIB=/opt/openresty/luajit/lib
+ENV LUAJIT_INC=/opt/openresty/luajit/include/luajit-2.1
+
+RUN luarocks install lua-cjson --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
+RUN luarocks install lua-resty-openidc --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
 
 
-# Stage 2 - run container
-FROM openresty/openresty:${OPENRESTY_VERSION}-alpine-slim AS run
+
+
+
+
+# Stage 2 - run hardened OpenResty Debian container
+FROM debian:${DEBIAN_VERSION}-slim AS run
 LABEL maintainer="mail@alexanderwolz.de"
 
-ARG NGINX_VERSION
-ENV NGINX_VERSION=${NGINX_VERSION}
+ENV PATH="/opt/openresty/luajit/bin:/opt/openresty/nginx/sbin:/opt/openresty/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ENV LUA_PATH="/opt/openresty/share/lua/5.1/?.lua;/opt/openresty/share/lua/5.1/?/init.lua;;"
+ENV LUA_CPATH="/opt/openresty/lib/lua/5.1/?.so;;"
 
-ARG OPENRESTY_VERSION
-ENV OPENRESTY_VERSION=${OPENRESTY_VERSION}
+ARG UID_NONROOT
+ARG GID_NONROOT
 
+# Runtime dependencies only (no compiler/toolchain)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    libmaxminddb0 \
+    libpcre2-8-0 \
+    zlib1g \
+    libssl3 \
+  && rm -rf /var/lib/apt/lists/*
+
+# Create a nonroot user/group with fixed IDs (K8s-friendly)
+RUN groupadd -g "${GID_NONROOT}" nonroot \
+  && useradd -u "${UID_NONROOT}" -g "${GID_NONROOT}" -s /usr/sbin/nologin -M nonroot \
+  && mkdir -p /home/nonroot && chown ${UID_NONROOT}:${GID_NONROOT} /home/nonroot
+
+# Sophisticated Docker entrypoint for checking fake certs and geoip database 
 COPY docker-entrypoint.sh /
 COPY entrypoint.sh /docker-entrypoint.d/00-custom-entrypoint.sh
 
-RUN apk update && apk add --no-cache bash nano curl perl libmaxminddb openssl \
-    && chmod +x /docker-entrypoint.sh \
-    && chmod +x /docker-entrypoint.d/00-custom-entrypoint.sh \
-    && rm /etc/nginx/conf.d/default.conf \
-    && mkdir /var/run/nginx \
-    && mkdir /etc/nginx/ssl \
-    && mkdir /etc/nginx/conf.d/http \
-    && mkdir /etc/nginx/conf.d/stream \
-    && mkdir -p /var/www/certbot \
-    # OPENRESTY adaptions to fit NGINX defaults
-    && rm /usr/local/openresty/nginx/logs/access.log \
-    && rm /usr/local/openresty/nginx/logs/error.log \
-    && mv /usr/local/openresty/nginx/conf/* /etc/nginx \
-    && mkdir /var/log/nginx \
-    && ln -sf /dev/stdout /var/log/nginx/access.log \
-    && ln -sf /dev/stderr /var/log/nginx/error.log
+# Copy OpenResty install from builder
+COPY --from=build /opt/openresty /opt/openresty
 
-# #OPM has very old package versions, so this resty-openidc version (1.7.5) needs a dependency hack
-# #install lua-resty-openidc -> https://github.com/zmartzone/lua-resty-openidc
-RUN opm install zmartzone/lua-resty-openidc \
-    && opm remove bungle/lua-resty-session && \
-    opm get bungle/lua-resty-session=3.10
+# Copy dynamic modules (explicit, so you see what gets added)
+COPY --from=build /opt/openresty/nginx/modules/ngx_http_geoip2_module.so /opt/openresty/nginx/modules/
+COPY --from=build /opt/openresty/nginx/modules/ngx_stream_geoip2_module.so /opt/openresty/nginx/modules/
 
-#LUAROCKS contains the new packages, but needs the alpine-fat container
-#RUN luarocks install lua-resty-openidc
-
-COPY --from=build /build/nginx/objs/ngx_http_geoip2_module.so /usr/local/openresty/nginx/modules/ngx_http_geoip2_module.so
-COPY --from=build /build/nginx/objs/ngx_stream_geoip2_module.so /usr/local/openresty/nginx/modules/ngx_stream_geoip2_module.so
-
+# Copy sample geo database
 COPY geoip/sample.mmdb /etc/geoip_sample/sample.mmdb
 COPY geoip/sample.mmdb /etc/geoip/GeoLite2-Country.mmdb
 COPY geoip/sample.mmdb /etc/geoip/GeoLite2-City.mmdb
 
-ADD conf/includes /etc/nginx/includes
-COPY conf/nginx.conf /etc/nginx/nginx.conf
-COPY conf/default.conf /etc/nginx/defaults/default.conf
-COPY conf/localhost.conf /etc/nginx/defaults/localhost.conf
+# Default gateway configs
+COPY config/nginx.conf /opt/openresty/nginx/conf/nginx.conf
+COPY config/includes /opt/openresty/nginx/conf/includes/
+COPY config/defaults /opt/openresty/nginx/conf/defaults/
 
-WORKDIR /var/www/html
+# Prepare writable dirs for non-root operation
+# NOTE: for readOnlyRootFilesystem=true -> mount tmpfs/emptyDir for these paths.
+RUN mkdir -p \
+    /var/run/nginx \
+    /opt/openresty/nginx/logs \
+    /opt/openresty/nginx/client_body_temp \
+    /opt/openresty/nginx/proxy_temp \
+    /opt/openresty/nginx/fastcgi_temp \
+    /opt/openresty/nginx/uwsgi_temp \
+    /opt/openresty/nginx/scgi_temp \
+    /opt/openresty/lualib/custom \
+    /opt/openresty/nginx/conf/vhosts/http \
+    /opt/openresty/nginx/conf/vhosts/stream \
+    /etc/ssl/gateway \
+    /var/www/certbot \
+    /var/www/html \
+  && rm -rf /opt/openresty/nginx/logs/access.log \
+  && rm -rf /opt/openresty/nginx/logs/error.log \
+  && ln -sf /dev/stdout /opt/openresty/nginx/logs/access.log \
+  && ln -sf /dev/stderr /opt/openresty/nginx/logs/error.log \
+  && chmod +x /docker-entrypoint.sh \
+  && chmod +x /docker-entrypoint.d/00-custom-entrypoint.sh \
+  && chown -R "${UID_NONROOT}:${GID_NONROOT}" \
+    /docker-entrypoint.sh \
+    /docker-entrypoint.d \
+    /var/run/nginx \
+    /opt/openresty/nginx/conf \
+    /opt/openresty/nginx/logs \
+    /opt/openresty/nginx/client_body_temp \
+    /opt/openresty/nginx/proxy_temp \
+    /opt/openresty/nginx/fastcgi_temp \
+    /opt/openresty/nginx/uwsgi_temp \
+    /opt/openresty/nginx/scgi_temp \
+    /opt/openresty/nginx/modules \
+    /opt/openresty/lualib/custom \
+    /etc/ssl/gateway \
+    /etc/geoip \
+    /etc/geoip_sample \
+    /var/www \
+  && chmod -R u=rwX,g=rX,o=rX /opt/openresty \
+  && chmod -R u=rwX,g=rwX,o=rX /opt/openresty/nginx/logs /var/run/nginx /etc/geoip /var/www/certbot
+
+# If you want to run on 80/443 as nonroot:
+# - Prefer running OpenResty on 8080/8443 and map ports outside
+# - Or add ONLY NET_BIND_SERVICE at runtime (K8s/Docker), not root.
+
+USER nonroot
+
+HEALTHCHECK CMD /opt/openresty/nginx/sbin/nginx -t || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["/usr/local/openresty/bin/openresty", "-c", "/etc/nginx/nginx.conf", "-g", "daemon off;"]
+CMD ["/opt/openresty/bin/openresty", "-g", "daemon off;"]
