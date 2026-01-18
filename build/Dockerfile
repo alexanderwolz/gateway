@@ -100,9 +100,6 @@ ENV PATH="/opt/openresty/luajit/bin:/opt/openresty/nginx/sbin:/opt/openresty/bin
 ENV LUA_PATH="/opt/openresty/share/lua/5.1/?.lua;/opt/openresty/share/lua/5.1/?/init.lua;;"
 ENV LUA_CPATH="/opt/openresty/lib/lua/5.1/?.so;;"
 
-ARG UID_NONROOT
-ARG GID_NONROOT
-
 # Runtime dependencies only (no compiler/toolchain)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -111,11 +108,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g \
     libssl3 \
   && rm -rf /var/lib/apt/lists/*
-
-# Create a nonroot user/group with fixed IDs (K8s-friendly)
-# RUN groupadd -g "${GID_NONROOT}" nonroot \
-#   && useradd -u "${UID_NONROOT}" -g "${GID_NONROOT}" -s /usr/sbin/nologin -M nonroot \
-#   && mkdir -p /home/nonroot && chown ${UID_NONROOT}:${GID_NONROOT} /home/nonroot
 
 # Sophisticated Docker entrypoint for checking fake certs and geoip database 
 COPY docker-entrypoint.sh /
