@@ -1,8 +1,6 @@
 ARG DEBIAN_VERSION="13.3"
 ARG OPENRESTY_VERSION="1.29.2.1"
 ARG GEOIP2_VERSION="3.4"
-ARG UID_NONROOT="65532"
-ARG GID_NONROOT="65532"
 
 
 # Stage 1 - build OpenResty and additional modules
@@ -89,6 +87,15 @@ RUN luarocks install lua-resty-openidc --lua-dir=/opt/openresty/luajit --tree=/o
 FROM debian:${DEBIAN_VERSION}-slim AS run
 LABEL maintainer="mail@alexanderwolz.de"
 
+ARG DEBIAN_VERSION
+ENV DEBIAN_VERSION=${DEBIAN_VERSION}
+
+ARG OPENRESTY_VERSION
+ENV OPENRESTY_VERSION=${OPENRESTY_VERSION}
+
+ARG GEOIP2_VERSION
+ENV GEOIP2_VERSION=${GEOIP2_VERSION}
+
 ENV PATH="/opt/openresty/luajit/bin:/opt/openresty/nginx/sbin:/opt/openresty/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ENV LUA_PATH="/opt/openresty/share/lua/5.1/?.lua;/opt/openresty/share/lua/5.1/?/init.lua;;"
 ENV LUA_CPATH="/opt/openresty/lib/lua/5.1/?.so;;"
@@ -106,9 +113,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # Create a nonroot user/group with fixed IDs (K8s-friendly)
-RUN groupadd -g "${GID_NONROOT}" nonroot \
-  && useradd -u "${UID_NONROOT}" -g "${GID_NONROOT}" -s /usr/sbin/nologin -M nonroot \
-  && mkdir -p /home/nonroot && chown ${UID_NONROOT}:${GID_NONROOT} /home/nonroot
+# RUN groupadd -g "${GID_NONROOT}" nonroot \
+#   && useradd -u "${UID_NONROOT}" -g "${GID_NONROOT}" -s /usr/sbin/nologin -M nonroot \
+#   && mkdir -p /home/nonroot && chown ${UID_NONROOT}:${GID_NONROOT} /home/nonroot
 
 # Sophisticated Docker entrypoint for checking fake certs and geoip database 
 COPY docker-entrypoint.sh /
@@ -153,7 +160,7 @@ RUN mkdir -p \
   && ln -sf /dev/stderr /opt/openresty/nginx/logs/error.log \
   && chmod +x /docker-entrypoint.sh \
   && chmod +x /docker-entrypoint.d/00-custom-entrypoint.sh \
-  && chown -R "${UID_NONROOT}:${GID_NONROOT}" \
+  && chown -R "nobody:nogroup" \
     /docker-entrypoint.sh \
     /docker-entrypoint.d \
     /var/run/nginx \
@@ -173,12 +180,7 @@ RUN mkdir -p \
   && chmod -R u=rwX,g=rX,o=rX /opt/openresty \
   && chmod -R u=rwX,g=rwX,o=rX /opt/openresty/nginx/logs /var/run/nginx /etc/geoip /var/www/certbot
 
-# If you want to run on 80/443 as nonroot:
-# - Prefer running OpenResty on 8080/8443 and map ports outside
-# - Or add ONLY NET_BIND_SERVICE at runtime (K8s/Docker), not root.
-
-# we need to find a way to work with SSL certs (they belong to root)
-#USER nonroot
+USER nobody
 
 HEALTHCHECK CMD /opt/openresty/nginx/sbin/nginx -t || exit 1
 
