@@ -39,6 +39,7 @@ if [ ! -f $FAKE_KEY ] || [ ! -f $FAKE_CERT ]; then
     rm -rf $FAKE_CERT $FAKE_KEY
     openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -subj "/C=DE/CN=gateway" -keyout $FAKE_KEY -out $FAKE_CERT 2>/dev/null \
         || (log "Error while creating fake certificate" && exit 1)
+    chown "nobody:nogroup" $FAKE_CERT $FAKE_KEY
     log "Fake certificate successfully created ($FAKE_CERT, $FAKE_KEY)"
 fi
 
@@ -46,6 +47,7 @@ if [ ! -f $DH_PARAM ]; then
     log "DH param does not exist, creating .."
     openssl dhparam -dsaparam -out $DH_PARAM 4096 2>/dev/null \
         || (log "Error while creating DH param" && exit 1)
+    chown "nobody:nogroup" $DH_PARAM
     log "DH param successfully created ($DH_PARAM)"
 fi
 

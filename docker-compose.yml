@@ -5,6 +5,7 @@ services:
     hostname: gateway
     build: ./build
     restart: unless-stopped
+    user: root
     environment:
       ENV_VARIABLE: Hello from Env
     ports:
