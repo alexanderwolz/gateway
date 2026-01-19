@@ -5,7 +5,9 @@ services:
     hostname: gateway
     build: ./build
     restart: unless-stopped
-    user: root
+    healthcheck:
+      test: ["CMD", "curl http://localhost:80/health || exit 1"]
+      timeout: 10s
     environment:
       ENV_VARIABLE: Hello from Env
     ports:
@@ -19,11 +21,23 @@ services:
       - ./config/lua:/opt/openresty/lualib/custom:ro
       - ./config/html:/var/www/html
       - geoip:/etc/geoip # mount your maxmind geoip db here (must be nonroot)
-    healthcheck:
-      test: ["CMD", "curl http://localhost:80/health || exit 1"]
-      timeout: 10s
     labels:
       - application.group=gateway
+    user: root
+    read_only: true
+    tmpfs:
+      - /var/run/nginx
+      - /etc/ssl/gateway
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - DAC_OVERRIDE
+      - CHOWN
+      - SETUID
+      - SETGID
+    security_opt:
+      - no-new-privileges:true
     networks:
       - gateway
 
