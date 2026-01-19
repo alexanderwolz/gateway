@@ -74,10 +74,8 @@ ENV LUAJIT_BIN=/opt/openresty/luajit/bin/luajit
 ENV LUAJIT_LIB=/opt/openresty/luajit/lib
 ENV LUAJIT_INC=/opt/openresty/luajit/include/luajit-2.1
 
-#TODO check if cjson is really necessary (should be packed by openResty)
-RUN luarocks install lua-cjson --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
 RUN luarocks install lua-resty-openidc --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
-
+RUN luarocks install lua-resty-healthcheck --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
 
 
 
