@@ -128,6 +128,9 @@ COPY config/nginx.conf /opt/openresty/nginx/conf/nginx.conf
 COPY config/includes /opt/openresty/nginx/conf/includes/
 COPY config/defaults /opt/openresty/nginx/conf/defaults/
 
+# Common LUA scripts
+COPY config/lua /opt/openresty/lualib/
+
 # Prepare writable dirs for non-root operation
 # NOTE: for readOnlyRootFilesystem=true -> mount tmpfs/emptyDir for these paths.
 RUN mkdir -p \
@@ -172,7 +175,7 @@ RUN mkdir -p \
 
 USER nobody
 
-HEALTHCHECK CMD /opt/openresty/nginx/sbin/nginx -t || exit 1
+HEALTHCHECK CMD ["/opt/openresty/bin/resty", "/opt/openresty/lualib/healthcheck.lua"]
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["/opt/openresty/bin/openresty", "-g", "daemon off;"]
