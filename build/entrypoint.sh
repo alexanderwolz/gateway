@@ -14,7 +14,6 @@ GEOIP_DIR="/etc/geoip"
 
 FAKE_CERT="$SSL_DIR/gateway.crt"
 FAKE_KEY="$SSL_DIR/gateway.key"
-DH_PARAM="$SSL_DIR/dhparam.pem"
 
 GEOIP_COUNTRY_FILE="$GEOIP_DIR/GeoLite2-Country.mmdb"
 GEOIP_CITY_FILE="$GEOIP_DIR/GeoLite2-City.mmdb"
@@ -41,14 +40,6 @@ if [ ! -f $FAKE_KEY ] || [ ! -f $FAKE_CERT ]; then
         || (log "Error while creating fake certificate" && exit 1)
     chown "nobody:nogroup" $FAKE_CERT $FAKE_KEY
     log "Fake certificate successfully created ($FAKE_CERT, $FAKE_KEY)"
-fi
-
-if [ ! -f $DH_PARAM ]; then
-    log "DH param does not exist, creating .."
-    openssl dhparam -dsaparam -out $DH_PARAM 4096 2>/dev/null \
-        || (log "Error while creating DH param" && exit 1)
-    chown "nobody:nogroup" $DH_PARAM
-    log "DH param successfully created ($DH_PARAM)"
 fi
 
 log "Finished custom entrypoint"
