@@ -75,8 +75,10 @@ ENV LUAJIT_LIB=/opt/openresty/luajit/lib
 ENV LUAJIT_INC=/opt/openresty/luajit/include/luajit-2.1
 
 RUN luarocks install lua-resty-openidc --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
-RUN luarocks install lua-resty-healthcheck --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
 
+RUN mkdir -p /opt/openresty/lualib/resty/upstream && \
+    wget -O /opt/openresty/lualib/resty/upstream/healthcheck.lua \
+    https://raw.githubusercontent.com/openresty/lua-resty-upstream-healthcheck/v0.08/lib/resty/upstream/healthcheck.lua
 
 
 
