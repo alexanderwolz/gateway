@@ -74,9 +74,9 @@ ENV LUAJIT_BIN=/opt/openresty/luajit/bin/luajit
 ENV LUAJIT_LIB=/opt/openresty/luajit/lib
 ENV LUAJIT_INC=/opt/openresty/luajit/include/luajit-2.1
 
+RUN luarocks install lua-resty-worker-events 0.3.3-1 --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
 RUN luarocks install lua-resty-openidc --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
-RUN luarocks install lua-resty-worker-events 2.0.1-1 --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
-RUN luarocks install lua-resty-healthcheck 3.1.1-1 --lua-dir=/opt/openresty/luajit --tree=/opt/openresty
+RUN luarocks install lua-resty-healthcheck 3.1.1-1 --lua-dir=/opt/openresty/luajit --tree=/opt/openresty --force
 
 
 
