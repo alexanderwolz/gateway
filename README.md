@@ -13,10 +13,14 @@ This repository holds a Dockerfile to provide a customized version of the OpenRe
 
 - [MaxMind DB library](https://github.com/maxmind/libmaxminddb)
 - [NGINX GeoIP2 module](https://github.com/leev/ngx_http_geoip2_module)
+- [LUA Resty OIDC module](https://github.com/zmartzone/lua-resty-openidc)
+- [LUA Resty Healthcheck module](https://github.com/Kong/lua-resty-healthcheck)
+
+
 
 
 ## 🐳 Docker Hub
-```docker pull alexanderwolz/gateway:1.29.2.1-12```
+```docker pull alexanderwolz/gateway:1.29.2.1-13```
 
 
 - - -
