@@ -1,0 +1,60 @@
+name: Build and Push Docker Image
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine version from Dockerfile
+        id: dockerfile-version
+        run: |
+          VERSION=$(grep -m1 '^ARG OPENRESTY_VERSION=' build/Dockerfile | sed -E 's/ARG OPENRESTY_VERSION="?([^"]*)"?/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "[ERROR] Could not determine OPENRESTY_VERSION from build/Dockerfile"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release tag matches Dockerfile version
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          TAG_VERSION="${TAG_NAME#v}"
+          DOCKERFILE_VERSION="${{ steps.dockerfile-version.outputs.version }}"
+          if [[ "$TAG_VERSION" != "$DOCKERFILE_VERSION-"* ]]; then
+            echo "[ERROR] Release tag ($TAG_NAME) does not match ARG OPENRESTY_VERSION in build/Dockerfile ($DOCKERFILE_VERSION)"
+            exit 1
+          fi
+
+      - name: Determine image tag
+        id: image-tag
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          echo "tag=${TAG_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: alexanderwolz
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: build
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: alexanderwolz/gateway:${{ steps.image-tag.outputs.tag }}
+          cache-from: type=gha,scope=gateway
+          cache-to: type=gha,mode=max,scope=gateway
