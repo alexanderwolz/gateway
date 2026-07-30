@@ -20,7 +20,7 @@ This repository holds a Dockerfile to provide a customized version of the OpenRe
 
 
 ## 🐳 Docker Hub
-```docker pull alexanderwolz/gateway:1.29.2.5-1```
+```docker pull alexanderwolz/gateway:1.31.1.1-1```
 
 
 - - -
